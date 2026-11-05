@@ -1,5 +1,9 @@
 stages:
   - test
+  - secrets
+  - sast
+  - lint
+  - sbom
 
 runner-check:
   stage: test
@@ -11,3 +15,58 @@ runner-check:
     - hostname
     - whoami
     - date
+
+gitleaks-scan:
+  stage: secrets
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [""]
+  tags:
+    - pfe
+    - security
+  script:
+    - gitleaks detect --source . --redact --report-format json --report-path gitleaks-report.json
+  artifacts:
+    when: always
+    paths:
+      - gitleaks-report.json
+
+semgrep-scan:
+  stage: sast
+  image:
+    name: semgrep/semgrep:latest
+    entrypoint: [""]
+  tags:
+    - pfe
+    - security
+  script:
+    - semgrep scan --config auto --json --output semgrep-report.json app/
+  artifacts:
+    when: always
+    paths:
+      - semgrep-report.json
+
+hadolint-scan:
+  stage: lint
+  image:
+    name: hadolint/hadolint:latest
+    entrypoint: [""]
+  tags:
+    - pfe
+    - security
+  script:
+    - hadolint app/Dockerfile
+
+syft-sbom:
+  stage: sbom
+  image:
+    name: anchore/syft:latest
+    entrypoint: [""]
+  tags:
+    - pfe
+    - security
+  script:
+    - syft dir:app -o cyclonedx-json=sbom-ci.json
+  artifacts:
+    paths:
+      - sbom-ci.json
