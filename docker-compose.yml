@@ -1,0 +1,40 @@
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: pfe-gitlab
+    hostname: gitlab.local
+    restart: unless-stopped
+    shm_size: "256m"
+
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://localhost:8080'
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = false
+        prometheus_monitoring['enable'] = false
+        gitlab_rails['usage_ping_enabled'] = false
+
+    ports:
+      - "127.0.0.1:8080:80"
+
+    volumes:
+      - ./gitlab/config:/etc/gitlab
+      - ./gitlab/logs:/var/log/gitlab
+      - ./gitlab/data:/var/opt/gitlab
+
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: pfe-gitlab-runner
+    restart: unless-stopped
+    depends_on:
+      - gitlab
+    volumes:
+      - ./runner/config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock

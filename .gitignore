@@ -1,0 +1,18 @@
+# GitLab local data
+gitlab/config/
+gitlab/logs/
+gitlab/data/
+
+# Runner configuration and credentials
+runner/config/config.toml
+
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+
+# Logs and reports generated locally
+*.log
+
+# Runner local identity
+runner/config/.runner_system_id

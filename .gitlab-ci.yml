@@ -1,0 +1,15 @@
+stages:
+  - test
+
+runner-check:
+  stage: test
+  tags:
+    - pfe
+    - security
+  script:
+    - echo "================================"
+    - echo "PFE DevSecOps Runner is working"
+    - echo "Hostname: $(hostname)"
+    - echo "User: $(whoami)"
+    - echo "Date: $(date)"
+    - echo "================================"
