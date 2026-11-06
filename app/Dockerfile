@@ -1,12 +1,11 @@
-FROM python:3.12-slim
+FROM python:latest
 
-WORKDIR /app
+ADD requirements.txt /app/requirements.txt
+RUN pip install -r /app/requirements.txt
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+ADD app.py /app/app.py
 
-COPY app.py .
-
+ENV FLASK_DEBUG=1
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+CMD ["python", "/app/app.py"]

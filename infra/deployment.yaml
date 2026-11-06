@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pfe-vulnerable-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pfe-vulnerable-app
+  template:
+    metadata:
+      labels:
+        app: pfe-vulnerable-app
+    spec:
+      hostNetwork: true
+      containers:
+        - name: app
+          image: pfe-vulnerable-app:latest
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            allowPrivilegeEscalation: true
+          volumeMounts:
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+      volumes:
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
