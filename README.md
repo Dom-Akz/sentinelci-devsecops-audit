@@ -111,8 +111,51 @@ curl http://localhost:5000
 # to stop:
 docker compose down pfe-vulnerable-app
 ```
+---
+
+
+## 🔍 Verify the app is vulnerable
+
+The Flask app is deliberately vulnerable. You can confirm this locally:
+
+```bash
+# start the app (if not already running)
+docker compose up -d pfe-vulnerable-app
+
+# 1️⃣ Command injection via /ping
+curl "http://localhost:5000/ping?host=127.0.0.1"
+# you should see: PONG 127.0.0.1 executed by subprocess
+
+# 2️⃣ Eval injection via /eval
+curl "http://localhost:5000/eval?expr=2+2"
+# you should see: 4
+
+# 3️⃣ Debug mode leaking information
+curl http://localhost:5000/
+# you should see: PFE DevSecOps Security Audit Application
+# and in the logs: DEBUG is enabled
+```
+
+You can also run the scanners manually (same as the CI pipeline):
+
+```bash
+# Gitleaks
+gitleaks detect --source .
+
+# Semgrep
+semgrep scan --config auto app/
+
+# Trivy filesystem
+trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 app/
+
+# Hadolint
+hadolint app/Dockerfile
+```
+
+These manual runs will produce the same findings that the CI pipeline reports.
 
 ---
+
 
 ## 📦 What's inside
 
