@@ -3,13 +3,26 @@ stages:
   - secrets
   - sast
   - lint
+  - build
   - sbom
+  - vuln
+  - image-scan
+  - sign
 
-runner-check:
-  stage: test
+variables:
+  IMAGE_TAG: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  IMAGE_LATEST: "$CI_REGISTRY_IMAGE:latest"
+  TRIVY_NO_PROGRESS: "true"
+  TRIVY_CACHE_DIR: ".trivycache"
+
+.runner:
   tags:
     - pfe
     - security
+
+runner-check:
+  extends: .runner
+  stage: test
   script:
     - echo "PFE DevSecOps Runner is working"
     - hostname
@@ -17,13 +30,11 @@ runner-check:
     - date
 
 gitleaks-scan:
+  extends: .runner
   stage: secrets
   image:
     name: zricethezav/gitleaks:latest
     entrypoint: [""]
-  tags:
-    - pfe
-    - security
   script:
     - gitleaks detect --source . --redact --report-format json --report-path gitleaks-report.json
   artifacts:
@@ -32,41 +43,150 @@ gitleaks-scan:
       - gitleaks-report.json
 
 semgrep-scan:
+  extends: .runner
   stage: sast
   image:
     name: semgrep/semgrep:latest
     entrypoint: [""]
-  tags:
-    - pfe
-    - security
   script:
-    - semgrep scan --config auto --json --output semgrep-report.json app/
+    - semgrep scan --config auto --error --json --output semgrep-report.json app/
   artifacts:
     when: always
     paths:
       - semgrep-report.json
 
 hadolint-scan:
+  extends: .runner
   stage: lint
   image:
     name: local/hadolint-shell:2.15.1
     entrypoint: [""]
-  tags:
-    - pfe
-    - security
   script:
-    - hadolint app/Dockerfile
+    - hadolint --failure-threshold warning --format json app/Dockerfile security/hadolint/Dockerfile security/syft/Dockerfile > hadolint-report.json
+  artifacts:
+    when: always
+    paths:
+      - hadolint-report.json
+
+build-image:
+  extends: .runner
+  stage: build
+  image: docker:27-cli
+  script:
+    - docker build -t "$IMAGE_TAG" -t "$IMAGE_LATEST" app/
+    - docker save "$IMAGE_TAG" -o image.tar
+  artifacts:
+    paths:
+      - image.tar
+    expire_in: 1 day
 
 syft-sbom:
+  extends: .runner
   stage: sbom
   image:
     name: local/syft-shell:1.56.0
     entrypoint: [""]
-  tags:
-    - pfe
-    - security
+  needs: ["build-image"]
   script:
-    - syft dir:app -o cyclonedx-json=sbom-ci.json
+    - syft docker-archive:image.tar -o cyclonedx-json=sbom-ci.json
   artifacts:
+    when: always
     paths:
       - sbom-ci.json
+
+trivy-fs:
+  extends: .runner
+  stage: vuln
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --format json --output trivy-fs-report.json app/
+  artifacts:
+    when: always
+    paths:
+      - trivy-fs-report.json
+
+trivy-config:
+  extends: .runner
+  stage: vuln
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - trivy config --severity HIGH,CRITICAL --exit-code 1 --format json --output trivy-config-report.json app/ security/ docker-compose.yml .gitlab-ci.yml
+  artifacts:
+    when: always
+    paths:
+      - trivy-config-report.json
+
+trivy-image:
+  extends: .runner
+  stage: image-scan
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  needs: ["build-image"]
+  script:
+    - trivy image --input image.tar --severity HIGH,CRITICAL --exit-code 1 --format json --output trivy-image-report.json
+  artifacts:
+    when: always
+    paths:
+      - trivy-image-report.json
+
+grype-image:
+  extends: .runner
+  stage: image-scan
+  image:
+    name: anchore/grype:latest
+    entrypoint: [""]
+  needs: ["build-image"]
+  script:
+    - grype docker-archive:image.tar -o json --file grype-report.json --fail-on high
+  artifacts:
+    when: always
+    paths:
+      - grype-report.json
+
+dockle-image:
+  extends: .runner
+  stage: image-scan
+  image:
+    name: goodwithtech/dockle:v0.4.15
+    entrypoint: [""]
+  needs: ["build-image"]
+  allow_failure: true
+  script:
+    - dockle --input image.tar --exit-code 1 --exit-level warn --format json --output dockle-report.json
+  artifacts:
+    when: always
+    paths:
+      - dockle-report.json
+
+push-image:
+  extends: .runner
+  stage: image-scan
+  image: docker:27-cli
+  needs: ["build-image"]
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker load -i image.tar
+    - docker push "$IMAGE_TAG"
+    - docker push "$IMAGE_LATEST"
+
+cosign-sign:
+  extends: .runner
+  stage: sign
+  image:
+    name: ghcr.io/sigstore/cosign/cosign:v3.1.3
+    entrypoint: [""]
+  needs: ["push-image"]
+  rules:
+    - if: '$COSIGN_PRIVATE_KEY && $CI_COMMIT_BRANCH == "main"'
+  script:
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$IMAGE_TAG"
+    - cosign verify --key env://COSIGN_PUBLIC_KEY "$IMAGE_TAG" > cosign-verify.txt
+  artifacts:
+    when: always
+    paths:
+      - cosign-verify.txt

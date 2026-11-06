@@ -13,9 +13,15 @@ services:
         nginx['listen_https'] = false
         prometheus_monitoring['enable'] = false
         gitlab_rails['usage_ping_enabled'] = false
+        registry_external_url 'http://localhost:5050'
+        registry['enable'] = true
+        registry_nginx['enable'] = true
+        registry_nginx['listen_port'] = 5050
+        registry_nginx['listen_https'] = false
 
     ports:
       - "127.0.0.1:8080:80"
+      - "127.0.0.1:5050:5050"
 
     volumes:
       - ./gitlab/config:/etc/gitlab
