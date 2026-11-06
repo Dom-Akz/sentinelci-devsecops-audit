@@ -49,7 +49,7 @@ semgrep-scan:
 hadolint-scan:
   stage: lint
   image:
-    name: hadolint/hadolint:latest
+    name: local/hadolint-shell:2.15.1
     entrypoint: [""]
   tags:
     - pfe
@@ -60,7 +60,7 @@ hadolint-scan:
 syft-sbom:
   stage: sbom
   image:
-    name: anchore/syft:latest
+    name: local/syft-shell:1.56.0
     entrypoint: [""]
   tags:
     - pfe

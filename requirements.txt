@@ -1,0 +1,4 @@
+pre-commit==4.7.0
+semgrep==1.183.0
+bandit==1.9.4
+checkov==3.4.3
