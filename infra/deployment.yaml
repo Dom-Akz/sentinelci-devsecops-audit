@@ -14,7 +14,7 @@ spec:
     spec:
       hostNetwork: true
       containers:
-        - name: app
+        - name: target-app
           image: pfe-vulnerable-app:latest
           securityContext:
             privileged: true

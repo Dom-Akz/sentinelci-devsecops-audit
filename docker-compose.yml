@@ -33,7 +33,6 @@ services:
         limits:
           memory: 6G
 
-
   gitlab-runner:
     image: gitlab/gitlab-runner:latest
     container_name: pfe-gitlab-runner
@@ -84,4 +83,4 @@ services:
   pfe-vulnerable-app:
     image: pfe-vulnerable-app:1.0
     build:
-      context: ./app
+      context: ./target-app
