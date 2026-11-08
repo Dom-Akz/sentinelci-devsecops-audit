@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import { seedInitialAdmin } from "./seed.js";
 
 // Bigger value so the hash is harder to break
 const SCRYPT_OPTS = { N: 131072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 };
@@ -31,7 +32,13 @@ function openDb(file) {
   const Database = require("better-sqlite3");
   const raw = new Database(file);
   raw.pragma("journal_mode = WAL");
-  return raw;
+  return {
+    engine: "better-sqlite3",
+    exec: (sql) => raw.exec(sql),
+    prepare: (sql) => raw.prepare(sql),
+    close: () => raw.close(),
+    pragma: (name) => raw.pragma(name),
+  };
 }
 
 const db = openDb(path.join(dataDir, "sentinel.db"));
@@ -68,6 +75,8 @@ export function verifyPassword(password, salt, expectedHash) {
 }
 
 // this is not safe, ! (hashPassword("admin123")) !
+// i create a small function in /lib/seed.js that do this so that everyone can have his personal account
+// in dev stage we can keep this if u want :)
 /*
 const userCount = db.prepare("SELECT COUNT(*) AS count FROM users").get().count
 if (userCount === 0) {
@@ -98,4 +107,5 @@ export function createUser(email, password, name, role = "user") {
     .get(Number(info.lastInsertRowid));
 }
 
+seedInitialAdmin(db); // the /lib/seed.js
 export default db;
