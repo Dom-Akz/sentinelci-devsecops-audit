@@ -16,3 +16,11 @@ runner/config/config.toml
 
 # Runner local identity
 runner/config/.runner_system_id
+
+# Next.js SentinelCI dashboard build artifacts
+sentinelci-devsecops-audit-dashboard/node_modules/
+sentinelci-devsecops-audit-dashboard/.next/
+sentinelci-devsecops-audit-dashboard/data/*.db
+sentinelci-devsecops-audit-dashboard/data/*.db-*
+sentinelci-devsecops-audit-dashboard/nohup.out
+sentinelci-devsecops-audit-dashboard/out/

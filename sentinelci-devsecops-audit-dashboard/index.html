@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SentinelCI DevSecOps Audit Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --background: #ffffff;
+        --foreground: #18181b;
+        --muted: #71717a;
+        --accent: #1d7dba;
+        --card: #f6f6f9;
+        --border: #d2d2d7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        margin: 0;
+        min-height: 100vh;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s ease;
+      }
+      .btn-primary { background: var(--accent); color: white; }
+      .btn-primary:hover { background: #1a6fa9; }
+      .btn-secondary { background: var(--card); color: var(--foreground); border: 1px solid var(--border); }
+      .btn-secondary:hover { background: #e5e5e7; }
+      .input { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.875rem; width: 100%; transition: border-color 0.2s; }
+      .input:focus { outline: none; border-color: var(--accent); }
+      .card { background: var(--card); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border); }
+    </style>
+  </head>
+  <body>
+    <div class="min-h-screen p-4 md:p-8">
+      <div class="max-w-4xl mx-auto">
+        <header class="mb-6">
+          <h1 class="text-2xl md:text-3xl font-bold mb-2">SentinelCI DevSecOps Audit Dashboard</h1>
+          <p class="text-sm text-muted">Security audit and compliance dashboard</p>
+        </header>
+
+        <main>
+          <div class="card mb-4">
+            <h2 class="text-lg font-semibold mb-3">Audit Overview</h2>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <p class="text-xs text-muted mb-1">Total Projects</p>
+                <p class="text-xl font-bold" id="totalProjects">0</p>
+              </div>
+              <div>
+                <p class="text-xs text-muted mb-1">Critical Issues</p>
+                <p class="text-xl font-bold text-red-600" id="criticalIssues">0</p>
+              </div>
+            </div>
+            <button class="btn btn-primary w-full mb-3">Refresh</button>
+            <p class="text-xs text-muted" id="lastUpdated">Last updated: never</p>
+          </div>
+
+          <div class="card">
+            <h2 class="text-lg font-semibold mb-3">Recent Audits</h2>
+            <div class="h-96 overflow-y-auto">
+              <div class="p-3 text-sm text-muted">No audit data available</div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script type="module">
+      import React from 'https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js';
+      import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js';
+      import { createRoot } from 'https://cdn.jsdelivr.net/npm/react-dom@18/client.min.js';
+
+      const App = () => {
+        const [projects, setProjects] = React.useState([]);
+        const [loading, setLoading] = React.useState(false);
+
+        React.useEffect(() => {
+          setLoading(true);
+          fetch("/api/projects")
+            .then((res) => res.json())
+            .then((data) => {
+              setProjects(data);
+              setLoading(false);
+              const now = new Date();
+              document.getElementById("lastUpdated").textContent =
+                "Last updated: " + now.toLocaleString();
+            })
+            .catch(() => {
+              setLoading(false);
+            });
+        }, []);
+
+        if (loading) {
+          return (
+            <div class="py-8 text-center">
+              <div class="animate-spin rounded-full border-4 border-muted border-t-transparent border-b-0 mx-auto mb-3" />
+              <p>Loading...</p>
+            </div>
+          );
+        }
+
+        return (
+          <div>
+            <p class="text-sm text-muted mb-2">Total Projects: {projects.length}</p>
+            <ul class="space-y-2">
+              {projects.map((project) => (
+                <li key={project.id} class="p-3 rounded-md border">
+                  <div class="flex justify-between align-middle">
+                    <span class="font-medium">{project.name}</span>
+                    <span class="text-xs text-muted">{project.status}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      };
+
+      createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
