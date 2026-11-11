@@ -74,19 +74,6 @@ export function verifyPassword(password, salt, expectedHash) {
   return crypto.timingSafeEqual(actual, expected);
 }
 
-// this is not safe, ! (hashPassword("admin123")) !
-// i create a small function in /lib/seed.js that do this so that everyone can have his personal account
-// in dev stage we can keep this if u want :)
-/*
-const userCount = db.prepare("SELECT COUNT(*) AS count FROM users").get().count
-if (userCount === 0) {
-  const { salt, hash } = hashPassword("admin123")
-  db.prepare(
-    "INSERT INTO users (email, name, password_hash, salt, role) VALUES (?, ?, ?, ?, ?)"
-  ).run("admin@sentinelci.dev", "Admin", hash, salt, "admin")
-}
-*/
-
 export function createUser(email, password, name, role = "user") {
   if (!email || !password) {
     throw new Error("Email and password are required");
