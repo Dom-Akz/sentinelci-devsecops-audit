@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import { seedInitialAdmin } from "./seed.js";
+import { printAdminCred } from "./seed.js";
 
 // Bigger value so the hash is harder to break
 const SCRYPT_OPTS = { N: 131072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 };
@@ -94,5 +95,7 @@ export function createUser(email, password, name, role = "user") {
     .get(Number(info.lastInsertRowid));
 }
 
-seedInitialAdmin(db); // the /lib/seed.js
+seedInitialAdmin(db, createUser); // the /lib/seed.js
+printAdminCred();
+
 export default db;
